@@ -9,6 +9,14 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller {
 
+    public function logout() {
+        /** @var StatefulGuard $auth */
+        $auth = auth();
+        $auth->logout();
+
+        return redirect('/')->with('success', 'You are now logged out.');
+    }
+
     public function showCorrectHomepage() {
         /** @var StatefulGuard $auth */
         $auth = auth();
@@ -34,9 +42,9 @@ class UserController extends Controller {
             'password' => $incomingFields['loginpassword'],
         ])) {
             $request->session()->regenerate();
-            return 'Congrats!!!';
+            return redirect('/')->with('success', 'You have successfully logged in.');
         } else {
-            return 'Sorry...';
+            return redirect('/')->with('failure', 'Sorry, your username and/or password were incorrect.');
         }
     }
 
@@ -46,7 +54,10 @@ class UserController extends Controller {
             'email' => ['required', 'email', Rule::unique('users', 'email')],
             'password' => ['required', 'min:8', 'confirmed'],
         ]);
-        User::create($incomingFields);
-        return $incomingFields;
+        $user = User::create($incomingFields);
+        /** @var StatefulGuard $auth */
+        $auth = auth();
+        $auth->login($user);
+        return redirect('/')->with('success', 'Thank you for creating an account');
     }
 }
