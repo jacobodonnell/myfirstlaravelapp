@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Symfony\Component\VarDumper\VarDumper;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class UserController extends Controller {
 
@@ -66,7 +68,38 @@ class UserController extends Controller {
     return view('profile-posts', [
       'username' => $user->username,
       'posts' => $user->posts()->latest()->get(),
-      'postCount' => $user->posts()->count()
+      'postCount' => $user->posts()->count(),
+      'avatar' => $user->avatar
     ]);
+  }
+
+  public function showAvatarForm() {
+    return view('avatar-form');
+  }
+
+  public function storeAvatar(Request $request) {
+    $request->validate([
+      'avatar' => 'required|image|max:5000'
+    ]);
+
+    $user = auth()->user();
+
+    $filename = $user->id . "-" . uniqid() . ".jpg";
+
+    $manager = new ImageManager(new Driver());
+    $image = $manager->read($request->file('avatar'));
+    $imgData = $image->cover(120, 120)->toJpeg();
+    Storage::disk('public')->put('avatars/' . $filename, $imgData);
+
+    $oldAvatar = $user->avatar;
+
+    $user->avatar = $filename;
+    $user->save();
+
+    if ($oldAvatar != "/fallback-avatar.jpg") {
+      Storage::disk('public')->delete(str_replace("/storage/", "", $oldAvatar));
+    }
+
+    return back()->with('success', 'Congrats on the new avatar!');
   }
 }
