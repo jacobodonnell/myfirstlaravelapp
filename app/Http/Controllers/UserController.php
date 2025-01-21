@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Follow;
 use App\Models\User;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 use Illuminate\Validation\Rule;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -25,7 +27,9 @@ class UserController extends Controller {
     $auth = auth();
 
     if ($auth->check()) {
-      return view('homepage-feed');
+      return view('homepage-feed', [
+        'posts' => $auth->user()->feedPosts()->latest()->paginate(4)
+      ]);
     } else {
       return view('homepage');
     }
@@ -64,12 +68,42 @@ class UserController extends Controller {
     return redirect('/')->with('success', 'Thank you for creating an account');
   }
 
-  public function profile(User $user) {
-    return view('profile-posts', [
+  private function getSharedData(User $user) {
+    $currentlyFollowing = 0;
+    /** @var StatefulGuard $auth */
+    $auth = auth();
+    if ($auth->check()) {
+      $currentlyFollowing = Follow::where([['user_id', '=', $auth->user()->id], ['followeduser', '=', $user->id]])->count();
+    }
+
+    View::share('sharedData', [
       'username' => $user->username,
-      'posts' => $user->posts()->latest()->get(),
       'postCount' => $user->posts()->count(),
-      'avatar' => $user->avatar
+      'avatar' => $user->avatar,
+      'currentlyFollowing' => $currentlyFollowing,
+      'followerCount' => $user->followers()->count(),
+      'followingCount' => $user->followingTheseUsers()->count()
+    ]);
+  }
+
+  public function profile(User $user) {
+    $this->getSharedData($user);
+    return view('profile-posts', [
+      'posts' => $user->posts()->latest()->get(),
+    ]);
+  }
+
+  public function profileFollowers(User $user) {
+    $this->getSharedData($user);
+    return view('profile-followers', [
+      'followers' => $user->followers()->latest()->get(),
+    ]);
+  }
+
+  public function profileFollowing(User $user) {
+    $this->getSharedData($user);
+    return view('profile-following', [
+      'followingUsers' => $user->followingTheseUsers()->latest()->get(),
     ]);
   }
 
