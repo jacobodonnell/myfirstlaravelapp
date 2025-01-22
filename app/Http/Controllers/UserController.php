@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\OurExampleEvent;
 use App\Models\Follow;
 use App\Models\User;
 use Illuminate\Contracts\Auth\StatefulGuard;
@@ -14,14 +15,6 @@ use Intervention\Image\ImageManager;
 
 class UserController extends Controller {
 
-  public function logout() {
-    /** @var StatefulGuard $auth */
-    $auth = auth();
-    $auth->logout();
-
-    return redirect('/')->with('success', 'You are now logged out.');
-  }
-
   public function showCorrectHomepage() {
     /** @var StatefulGuard $auth */
     $auth = auth();
@@ -33,6 +26,14 @@ class UserController extends Controller {
     } else {
       return view('homepage');
     }
+  }
+
+  public function logout() {
+    /** @var StatefulGuard $auth */
+    $auth = auth();
+    event(new OurExampleEvent(['username' => auth()->user()->username, 'action' => 'logout']));
+    $auth->logout();
+    return redirect('/')->with('success', 'You are now logged out.');
   }
 
   public function login(Request $request) {
@@ -49,6 +50,7 @@ class UserController extends Controller {
       'password' => $incomingFields['loginpassword'],
     ])) {
       $request->session()->regenerate();
+      event(new OurExampleEvent(['username' => auth()->user()->username, 'action' => 'login']));
       return redirect('/')->with('success', 'You have successfully logged in.');
     } else {
       return redirect('/')->with('failure', 'Sorry, your username and/or password were incorrect.');
