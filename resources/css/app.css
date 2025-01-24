@@ -16,6 +16,7 @@ body,
 .header-search-icon {
   position: relative;
   top: 3px;
+  cursor: pointer;
 }
 
 .header-chat-icon {
