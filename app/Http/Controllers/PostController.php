@@ -31,6 +31,23 @@ class PostController extends Controller {
         return redirect("/post/{$newPost->id}")->with('success', 'New post successfully created');
     }
 
+    public function storeNewPostApi(Request $request) {
+        $incomingFields = $request->validate([
+            'title' => 'required',
+            'body' => 'required'
+        ]);
+
+        $incomingFields['title'] = strip_tags($incomingFields['title']);
+        $incomingFields['body'] = strip_tags($incomingFields['body']);
+        /** @var StatefulGuard $auth */
+        $auth = auth();
+        $incomingFields['user_id'] = $auth->id();
+
+        $newPost = Post::create($incomingFields);
+
+        return $newPost->id;
+    }
+
     public function viewSinglePost(Post $post) {
 
         $post['body'] = strip_tags(Str::markdown($post->body), '<p><ul><ul><li><strong><em><h3><br>');
@@ -44,6 +61,15 @@ class PostController extends Controller {
         $post->delete();
 
         return redirect('/profile/' . $auth->user()->username)->with('success', 'Post successfully deleted.');
+    }
+
+    public function deleteApi(Post $post) {
+        /** @var StatefulGuard $auth */
+        $auth = auth();
+
+        $post->delete();
+
+        return 'true';
     }
 
     public function showEditForm(Post $post) {
